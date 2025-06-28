@@ -49,6 +49,8 @@ public class PacMan extends  JPanel {
          //X = wall, O = skip, P = pac man, ' ' = food
     //Ghosts: b = blue, o = orange, p = pink, r = red
     private String[] tileMap = {
+
+        //en este arreglo cada string es una linea
         "XXXXXXXXXXXXXXXXXXX",
         "X        X        X",
         "X XX XXX X XXX XX X",
@@ -92,6 +94,59 @@ public class PacMan extends  JPanel {
         pacmanRightImage = new  ImageIcon(getClass().getResource("./pacmanRight.png")).getImage();
         
         
+    }
+
+    public void loadMap() {
+        walls = new HashSet<Block>();
+        foods = new HashSet<Block>();
+        ghosts = new HashSet<Block>();
+
+        for (int r = 0; r < rowCount; r++) {
+            for (int c = 0; c < columnCount; c++) {
+                String row  = tileMap[r];
+                char tileMapChar = row.charAt(c);
+
+                int x = c*tileSize;
+                int y = r*tileSize;
+
+                if (tileMapChar ==  "X") { //PARED DE BLOQUEO
+                    Block wall  = new Block(wallImage, x, y, tileSize, tileSize);
+                    wall.add(wall);
+
+                }
+             //fantasmas
+                else if (tileMapChar == "b"){ //blue ghost
+                    Block ghost = new Block(blueGhostImage, x, y, tileSize, tileSize);
+                    ghosts.add(ghost);
+
+                }
+
+                else if (tileMapChar == "o"){ //orange ghost
+                    Block ghost = new Block(orangeGhostImage, x, y, tileSize, tileSize);
+                    ghosts.add(ghost);
+                }
+                else if (tileMapChar == "p"){ //pink ghost
+                    Block ghost = new Block(pinkGhostImage, x, y, tileSize, tileSize);
+                    ghosts.add(ghost);
+                }
+                else if (tileMapChar == "r"){ //red ghost
+                    Block ghost = new Block(redGhostImage, x, y, tileSize, tileSize);
+                    ghosts.add(ghost);
+                }
+
+                //para pacman
+                else if (tileMapChar == "P"){ //Pacman
+                    pacman = new  Block(pacmanRightImage, x, y, tileSize, tileSize); 
+                }
+
+                else if (tileMapChar == ' '){ //food
+                    Block food = new Block (null, x + 14, y + 14, 4,4);
+                    food.add(food;)
+
+                }
+
+            }
+        }
     }
 
 
