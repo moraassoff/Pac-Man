@@ -6,7 +6,7 @@ import javax.swing.*;
 
 
 
-public class PacMan extends  JPanel  {
+public class PacMan extends  JPanel implements ActionListener, KeyListener {
     class Block {
         int x;
         int y;
@@ -79,9 +79,14 @@ public class PacMan extends  JPanel  {
         HashSet<Block> ghosts;
         Block pacman; 
 
+        Timer gameLoop;
+
+
     PacMan (){
         setPreferredSize(new Dimension(boardWidth, boardHeight));
         setBackground(Color.BLACK);
+        add.KeyListener(this);
+        setFocusable(true);
 
         wallImage = new  ImageIcon(getClass().getResource("./wall.png")).getImage();
         blueGhostImage = new  ImageIcon(getClass().getResource("./blueGhost.png")).getImage();
@@ -95,6 +100,8 @@ public class PacMan extends  JPanel  {
         pacmanRightImage = new  ImageIcon(getClass().getResource("./pacmanRight.png")).getImage();
         
         loadMap();
+        gameLoop = new Timer(50, this);
+        gameLoop.start();
        
     }
 
@@ -161,5 +168,23 @@ public class PacMan extends  JPanel  {
         for (Block food : foods){
             g.fillRect(food.x, food.y, food.width, food.height);
         }
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        repaint();
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {}
+       
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        System.out.println("KeyEvent: " + e.getKeyCode());
     }
 }
