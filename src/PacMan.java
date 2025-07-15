@@ -1,8 +1,23 @@
 import java.awt.*;
 import java.awt.event.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.reflect.Array;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Random;
+
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 import javax.swing.*;
+
 
 public class PacMan extends JPanel implements ActionListener, KeyListener {
     class Block {
@@ -80,6 +95,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     private Image orangeGhostImage;
     private Image pinkGhostImage;
     private Image redGhostImage;
+    private Image powerUpImage;
 
     private Image pacmanUpImage;
     private Image pacmanDownImage;
@@ -90,11 +106,11 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     //Ghosts: b = blue, o = orange, p = pink, r = red
     private String[] tileMap = {
         "XXXXXXXXXXXXXXXXXXX",
-        "X        X        X",
+        "X   w    X    w   X",
         "X XX XXX X XXX XX X",
         "X                 X",
         "X XX X XXXXX X XX X",
-        "X    X       X    X",
+        "Xw   X       X   wX",
         "XXXX XXXX XXXX XXXX",
         "OOOX X       X XOOO",
         "XXXX X XXrXX X XXXX",
@@ -102,20 +118,26 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         "XXXX X XXXXX X XXXX",
         "OOOX X       X XOOO",
         "XXXX X XXXXX X XXXX",
-        "X        X        X",
+        "Xw       X       wX",
         "X XX XXX X XXX XX X",
         "X  X     P     X  X",
         "XX X X XXXXX X X XX",
         "X    X   X   X    X",
         "X XXXXXX X XXXXXX X",
-        "X                 X",
+        "Xw               wX",
         "XXXXXXXXXXXXXXXXXXX" 
     };
 
     HashSet<Block> walls;
     HashSet<Block> foods;
     HashSet<Block> ghosts;
+    HashSet<Block> powerUps;
     Block pacman;
+
+    boolean isInvicible = false;
+    URL file = new URL("file:./comida.wav");
+    AudioInputStream ais = AudioSystem.getAudioInputStream(file);
+    Clip clip = AudioSystem.getClip();
 
     Timer gameLoop;
     char[] directions = {'U', 'D', 'L', 'R'}; //up down left right
@@ -124,11 +146,17 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     int lives = 3;
     boolean gameOver = false;
 
-    PacMan() {
+    PacMan() throws Exception {
         setPreferredSize(new Dimension(boardWidth, boardHeight));
         setBackground(Color.BLACK);
         addKeyListener(this);
         setFocusable(true);
+
+        clip.open(ais);
+        clip.loop(Clip.LOOP_CONTINUOUSLY);
+
+        clip.setFramePosition(0);
+        clip.start();
 
         //load images
         wallImage = new ImageIcon(getClass().getResource("./wall.png")).getImage();
@@ -136,6 +164,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         orangeGhostImage = new ImageIcon(getClass().getResource("./orangeGhost.png")).getImage();
         pinkGhostImage = new ImageIcon(getClass().getResource("./pinkGhost.png")).getImage();
         redGhostImage = new ImageIcon(getClass().getResource("./redGhost.png")).getImage();
+        powerUpImage = new ImageIcon(getClass().getResource("./cherry.png")).getImage();
 
         pacmanUpImage = new ImageIcon(getClass().getResource("./pacmanUp.png")).getImage();
         pacmanDownImage = new ImageIcon(getClass().getResource("./pacmanDown.png")).getImage();
@@ -157,6 +186,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         walls = new HashSet<Block>();
         foods = new HashSet<Block>();
         ghosts = new HashSet<Block>();
+        powerUps = new HashSet<Block>();
 
         for (int r = 0; r < rowCount; r++) {
             for (int c = 0; c < columnCount; c++) {
@@ -192,6 +222,9 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
                 else if (tileMapChar == ' ') { //food
                     Block food = new Block(null, x + 14, y + 14, 4, 4);
                     foods.add(food);
+                } else if(tileMapChar == 'w') { //Power up food
+                    Block powerUp = new Block(powerUpImage, x, y, tileSize, tileSize);
+                    powerUps.add(powerUp);
                 }
             }
         }
@@ -211,6 +244,10 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
 
         for (Block wall : walls) {
             g.drawImage(wall.image, wall.x, wall.y, wall.width, wall.height, null);
+        }
+
+        for (Block powerUp : powerUps) {
+            g.drawImage(powerUp.image, powerUp.x, powerUp.y, powerUp.width, powerUp.height, null);
         }
 
         g.setColor(Color.WHITE);
@@ -243,12 +280,21 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         //check ghost collisions
         for (Block ghost : ghosts) {
             if (collision(ghost, pacman)) {
-                lives -= 1;
-                if (lives == 0) {
-                    gameOver = true;
-                    return;
+                if(!isInvicible) {
+                    lives -= 1;
+                    if (lives == 0) {
+                        gameLoop.stop();
+                        gameOver = true;
+                        clip.stop();
+                        GameOver();
+                        return;
+                    }
+
+                    resetPositions();
+                } else {
+                    ghost.reset();
+                    score += 100;
                 }
-                resetPositions();
             }
 
             if (ghost.y == tileSize*9 && ghost.direction != 'U' && ghost.direction != 'D') {
@@ -280,6 +326,24 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
             loadMap();
             resetPositions();
         }
+
+        Block powerUpEaten = null;
+        for(Block power : powerUps) {
+            if(collision(pacman, power)) {
+                powerUpEaten = power;
+                score += 50;
+                isInvicible = true;
+
+                int delay = 10000;
+                ActionListener taskPerformer = new ActionListener() {
+                    public void actionPerformed(ActionEvent evt) {
+                        isInvicible = false;
+                    }
+                };
+                new Timer(delay, taskPerformer).start();
+            }
+        }
+        powerUps.remove(powerUpEaten);
     }
 
     public boolean collision(Block a, Block b) {
@@ -306,7 +370,75 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         repaint();
         if (gameOver) {
             gameLoop.stop();
+            
         }
+    }
+
+    private void GameOver() {
+        try{
+                File file = new File("./leaderboards.txt");
+                if(file.createNewFile()) {
+                    try (BufferedWriter writer = new BufferedWriter(new FileWriter("leaderboards.txt", false))) {
+                        writer.write(score + "");
+                        writer.close();
+                    }
+                    catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                } else {
+                    BufferedReader reader = new BufferedReader(new FileReader("./leaderboards.txt"));
+                    ArrayList<Integer> scores = new ArrayList<>();
+                    String line;
+
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.isEmpty()) continue; // Ignora líneas vacías
+                        try {
+                            scores.add(Integer.parseInt(line));
+                        } catch (NumberFormatException ex) {
+                            // Ignora líneas no numéricas
+                            continue;
+                        }
+                    }
+                    reader.close();
+                    file.delete(); // Elimina el archivo original
+                    // Agrega el nuevo puntaje
+                    scores.add(score);
+                    // Ordena de mayor a menor
+                    Collections.sort(scores, Collections.reverseOrder());
+
+                    // Mantiene solo los primeros 10 puntajes
+                    if (scores.size() > 10) {
+                        scores = new ArrayList<>(scores.subList(0, 9));
+                    }
+
+                    try (BufferedWriter writer = new BufferedWriter(new FileWriter("leaderboards.txt", false))) {
+                        for (Integer s : scores) {
+                            writer.write(s.toString());
+                            writer.newLine();
+                        }
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            } catch(Exception ex) {
+                System.out.println("An error occurred.");
+                ex.printStackTrace();
+            }
+
+            JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
+
+            GameOver gameOver;
+            try {
+                gameOver = new GameOver();
+                frame.add(gameOver);
+                frame.pack();
+                gameOver.requestFocus();
+                frame.setVisible(true);
+            } catch (Exception e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
     }
 
     @Override
@@ -317,39 +449,33 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
 
     @Override
     public void keyReleased(KeyEvent e) {
-        if (gameOver) {
-            loadMap();
-            resetPositions();
-            lives = 3;
-            score = 0;
-            gameOver = false;
-            gameLoop.start();
-        }
         // System.out.println("KeyEvent: " + e.getKeyCode());
-        if (e.getKeyCode() == KeyEvent.VK_UP) {
-            pacman.updateDirection('U');
-        }
-        else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
-            pacman.updateDirection('D');
-        }
-        else if (e.getKeyCode() == KeyEvent.VK_LEFT) {
-            pacman.updateDirection('L');
-        }
-        else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
-            pacman.updateDirection('R');
-        }
+        if(!gameOver) {
+            if (e.getKeyCode() == KeyEvent.VK_UP) {
+                pacman.updateDirection('U');
+            }
+            else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                pacman.updateDirection('D');
+            }
+            else if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+                pacman.updateDirection('L');
+            }
+            else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+                pacman.updateDirection('R');
+            }
 
-        if (pacman.direction == 'U') {
-            pacman.image = pacmanUpImage;
-        }
-        else if (pacman.direction == 'D') {
-            pacman.image = pacmanDownImage;
-        }
-        else if (pacman.direction == 'L') {
-            pacman.image = pacmanLeftImage;
-        }
-        else if (pacman.direction == 'R') {
-            pacman.image = pacmanRightImage;
+            if (pacman.direction == 'U') {
+                pacman.image = pacmanUpImage;
+            }
+            else if (pacman.direction == 'D') {
+                pacman.image = pacmanDownImage;
+            }
+            else if (pacman.direction == 'L') {
+                pacman.image = pacmanLeftImage;
+            }
+            else if (pacman.direction == 'R') {
+                pacman.image = pacmanRightImage;
+            }
         }
     }
 }
