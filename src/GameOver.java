@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
-
+import java.awt.FontMetrics;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
@@ -51,7 +51,7 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
     private int boardHeight = rowCount * tileSize;
 
     private String[] tileMap = {
-        "                   ",
+        "        G          ",
         "      P            ",
         "                   ",
         "  1                ",
@@ -78,6 +78,7 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
     private Image logoImage;
     Block logo;
     Block text;
+    Block gameOverText;
 
     GameOver() throws Exception {
         setPreferredSize(new Dimension(boardWidth, boardHeight));
@@ -129,6 +130,10 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
                     text = new Block(null, x, y, x, y);
                 }
 
+                if (tileMapChar == 'G') { // Game Over Text
+                    gameOverText = new Block(null, x, y, tileSize, tileSize);
+                }
+
                 if (Character.isDigit(tileMapChar) && count < 10) {
                     leaderboards.add(new Block(null, x, y, tileSize, tileSize));
                     count++;
@@ -143,13 +148,30 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
     }
 
     public void draw(Graphics g) {
-        g.setFont(new Font("Arial", Font.PLAIN, 18));
-        g.setColor(Color.WHITE);
-        g.drawString("MEJORES PUNTAJES", logo.x, logo.y + 100);
 
-        g.setFont(new Font("Arial", Font.PLAIN, 18));
+        if (gameOverText != null) {
+            g.setColor(Color.RED);
+            g.setFont(new Font("Arial", Font.BOLD, 48));
+            int stringWidth = g.getFontMetrics().stringWidth("GAME OVER");
+            g.drawString("GAME OVER", (boardWidth - stringWidth) / 2, gameOverText.y + 100);
+
+        }
+
+        Font font = new Font("Arial", Font.PLAIN, 18);
+        g.setFont(font);
         g.setColor(Color.WHITE);
-        g.drawString("PRESIONA E PARA REGRESAR", text.x -6, text.y);
+        String scoreTitle = "MEJORES PUNTAJES";
+        FontMetrics fm = g.getFontMetrics(font);
+        int titleWidth = fm.stringWidth(scoreTitle);
+        int xTitle = (boardWidth - titleWidth) / 2;
+        int yTitle = logo.y + 100;
+        g.drawString(scoreTitle, xTitle, yTitle);
+
+        String pressE = "PRESIONA E PARA REGRESAR";
+        int pressEWidth = fm.stringWidth(pressE);
+        int xPressE = (boardWidth - pressEWidth) / 2;
+        int yPressE = text.y;
+        g.drawString(pressE, xPressE, yPressE);
         
         int count = 0;
         ArrayList<String> scores = GetLeaderboards();
