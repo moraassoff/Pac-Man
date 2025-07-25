@@ -81,7 +81,7 @@ public class MainMenu extends JPanel implements ActionListener, KeyListener {
         addKeyListener(this);
         setFocusable(true);
 
-        URL file = new URL("file:./musica.wav");
+        URL file = getClass().getResource("/musica.wav");  // Nota la barra al inicio
         AudioInputStream ais = AudioSystem.getAudioInputStream(file);
         Clip clip = AudioSystem.getClip();
         clip.open(ais);
