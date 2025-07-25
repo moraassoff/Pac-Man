@@ -135,7 +135,8 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     Block pacman;
 
     boolean isInvicible = false;
-    URL file = new URL("file:./comida.wav");
+   
+    URL file = getClass().getResource("/comida.wav");
     AudioInputStream ais = AudioSystem.getAudioInputStream(file);
     Clip clip = AudioSystem.getClip();
 
