@@ -13,13 +13,15 @@ import javax.sound.sampled.Clip;
 import javax.swing.*;
 
 public class MainMenu extends JPanel implements ActionListener, KeyListener {
-
+    private Cliente cliente;
     class Block {
         int x;
         int y;
         int width;
         int height;
         Image image;
+        
+
 
         int startX;
         int startY;
@@ -133,11 +135,34 @@ public class MainMenu extends JPanel implements ActionListener, KeyListener {
     @Override
     public void keyReleased(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_E) {
+        String name = JOptionPane.showInputDialog(this, "Ingresa tu nombre:");
+
+        if (name == null || name.trim().isEmpty()) {
+            return;
+        }
+
+        cliente = new Cliente(name.trim());
+
+        JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
+
+        PacMan pacmanGame;
+        try {
+            pacmanGame = new PacMan(cliente);  
+            frame.getContentPane().removeAll(); 
+            frame.add(pacmanGame);
+            frame.pack();
+            pacmanGame.requestFocus();
+            frame.setVisible(true);
+        } catch (Exception e1) {
+            e1.printStackTrace();
+        }
+    }
+        if (e.getKeyCode() == KeyEvent.VK_E) {
             JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
 
             PacMan pacmanGame;
             try {
-                pacmanGame = new PacMan();
+                pacmanGame = new PacMan(cliente);
                 frame.add(pacmanGame);
                 frame.pack();
                 pacmanGame.requestFocus();

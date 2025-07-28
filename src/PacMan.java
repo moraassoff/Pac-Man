@@ -20,6 +20,7 @@ import javax.swing.*;
 
 
 public class PacMan extends JPanel implements ActionListener, KeyListener {
+    
     class Block {
         int x;
         int y;
@@ -84,6 +85,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         }
     }
 
+    private Cliente cliente;
     private int rowCount = 21;
     private int columnCount = 19;
     private int tileSize = 32;
@@ -102,8 +104,6 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     private Image pacmanLeftImage;
     private Image pacmanRightImage;
 
-    //X = wall, O = skip, P = pac man, ' ' = food
-    //Ghosts: b = blue, o = orange, p = pink, r = red
     private String[] tileMap = {
         "XXXXXXXXXXXXXXXXXXX",
         "X   w    X    w   X",
@@ -141,13 +141,13 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     Clip clip = AudioSystem.getClip();
 
     Timer gameLoop;
-    char[] directions = {'U', 'D', 'L', 'R'}; //up down left right
+    char[] directions = {'U', 'D', 'L', 'R'}; 
     Random random = new Random();
-    int score = 0;
     int lives = 3;
     boolean gameOver = false;
 
-    PacMan() throws Exception {
+    public PacMan(Cliente cliente) throws Exception {
+        this.cliente = cliente;
         setPreferredSize(new Dimension(boardWidth, boardHeight));
         setBackground(Color.BLACK);
         addKeyListener(this);
@@ -177,8 +177,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
             char newDirection = directions[random.nextInt(4)];
             ghost.updateDirection(newDirection);
         }
-        //how long it takes to start timer, milliseconds gone between frames
-        gameLoop = new Timer(50, this); //20fps (1000/50)
+        gameLoop = new Timer(50, this); 
         gameLoop.start();
 
     }
@@ -258,10 +257,12 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         //score
         g.setFont(new Font("Arial", Font.PLAIN, 18));
         if (gameOver) {
-            g.drawString("Game Over: " + String.valueOf(score), tileSize/2, tileSize/2);
+            g.drawString("Game Over - " + cliente.getName() + ": " + cliente.getScore(), tileSize/2, tileSize/2);
+
         }
         else {
-            g.drawString("x" + String.valueOf(lives) + " Score: " + String.valueOf(score), tileSize/2, tileSize/2);
+            g.drawString("Jugador: " + cliente.getName() + " | Vidas: x" + lives + " | Puntaje: " + cliente.getScore(), tileSize/2, tileSize/2);
+
         }
     }
 
@@ -294,7 +295,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
                     resetPositions();
                 } else {
                     ghost.reset();
-                    score += 100;
+                    cliente.addScore(100);
                 }
             }
 
@@ -318,7 +319,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         for (Block food : foods) {
             if (collision(pacman, food)) {
                 foodEaten = food;
-                score += 10;
+                cliente.addScore(10);
             }
         }
         foods.remove(foodEaten);
@@ -328,11 +329,12 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
             resetPositions();
         }
 
+        //check power up collision
         Block powerUpEaten = null;
         for(Block power : powerUps) {
             if(collision(pacman, power)) {
                 powerUpEaten = power;
-                score += 50;
+                cliente.addScore(50);
                 isInvicible = true;
 
                 int delay = 10000;
@@ -381,7 +383,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
             File file = new File("./leaderboards.txt");
             if (file.createNewFile()) {
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter("leaderboards.txt", false))) {
-                    writer.write(score + "");
+                    writer.write(cliente + "");
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
@@ -403,7 +405,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
                 reader.close();
                 file.delete(); // Elimina el archivo original
 
-                scores.add(score);
+                scores.add(cliente.getScore());
                 Collections.sort(scores, Collections.reverseOrder());
 
                 if (scores.size() > 10) {
@@ -412,7 +414,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
 
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter("leaderboards.txt", false))) {
                     for (Integer s : scores) {
-                        writer.write(s.toString());
+                       writer.write(cliente.getName() + ": " + s.toString());
                         writer.newLine();
                     }
                 } catch (IOException ex) {
@@ -427,13 +429,13 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
 
         try {
-            frame.getContentPane().removeAll(); // LIMPIA TODO EL CONTENIDO ANTERIOR
-            GameOver gameOver = new GameOver(); // CREA NUEVO PANEL GAMEOVER
-            frame.add(gameOver); // AGREGA EL PANEL
-            frame.pack(); // AJUSTA EL TAMAÑO DEL FRAME
-            frame.repaint(); // REFRESCA EL FRAME
-            gameOver.requestFocus(); // PONE FOCO EN EL PANEL NUEVO
-            frame.setVisible(true); // ASEGURA QUE EL FRAME SIGA VISIBLE
+            frame.getContentPane().removeAll(); 
+            GameOver gameOver = new GameOver(cliente); 
+            frame.add(gameOver); 
+            frame.pack();
+            frame.repaint();
+            gameOver.requestFocus(); 
+            frame.setVisible(true); 
         } catch (Exception e1) {
             e1.printStackTrace();
         }

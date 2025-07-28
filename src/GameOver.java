@@ -20,15 +20,10 @@ import javax.swing.*;
 public class GameOver extends JPanel implements ActionListener, KeyListener {
 
     class Block {
-        int x;
-        int y;
-        int width;
-        int height;
+        int x, y, width, height;
         Image image;
         String description;
-
-        int startX;
-        int startY;
+        int startX, startY;
         char direction = 'U'; // U D L R
         int velocityX = 0;
         int velocityY = 0;
@@ -76,11 +71,14 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
 
     private ArrayList<Block> leaderboards = new ArrayList<>();
     private Image logoImage;
-    Block logo;
-    Block text;
-    Block gameOverText;
+    private Block logo;
+    private Block text;
+    private Block gameOverText;
+    private Cliente cliente; // NUEVO: Jugador actual
 
-    GameOver() throws Exception {
+    // CONSTRUCTOR MODIFICADO
+    public GameOver(Cliente cliente) throws Exception {
+        this.cliente = cliente;
         setPreferredSize(new Dimension(boardWidth, boardHeight));
         setBackground(Color.BLACK);
         addKeyListener(this);
@@ -90,7 +88,7 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
         loadMap();
     }
 
-    private ArrayList<String> GetLeaderboards () {
+    private ArrayList<String> GetLeaderboards() {
         try {
             BufferedReader reader = new BufferedReader(new FileReader("./leaderboards.txt"));
             String line;
@@ -98,13 +96,8 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
 
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
-                if (line.isEmpty()) continue; // Ignora líneas vacías
-                try {
-                    scores.add(line);
-                } catch (NumberFormatException ex) {
-                    // Ignora líneas no numéricas
-                    continue;
-                }
+                if (line.isEmpty()) continue;
+                scores.add(line);
             }
             reader.close();
             return scores;
@@ -121,16 +114,14 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
                 String row = tileMap[r];
                 char tileMapChar = row.charAt(c);
 
-                int x = c*tileSize;
-                int y = r*tileSize;
+                int x = c * tileSize;
+                int y = r * tileSize;
 
-                if (tileMapChar == 'P') { //pacman logo
+                if (tileMapChar == 'P') {
                     logo = new Block(logoImage, x, y, tileSize, tileSize);
-                } else if (tileMapChar == 'C') { //press any key
+                } else if (tileMapChar == 'C') {
                     text = new Block(null, x, y, x, y);
-                }
-
-                if (tileMapChar == 'G') { // Game Over Text
+                } else if (tileMapChar == 'G') {
                     gameOverText = new Block(null, x, y, tileSize, tileSize);
                 }
 
@@ -148,31 +139,41 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
     }
 
     public void draw(Graphics g) {
-
+        // GAME OVER text
         if (gameOverText != null) {
             g.setColor(Color.RED);
             g.setFont(new Font("Arial", Font.BOLD, 48));
-            int stringWidth = g.getFontMetrics().stringWidth("GAME OVER");
-            g.drawString("GAME OVER", (boardWidth - stringWidth) / 2, gameOverText.y + 100);
-
+            String gameOverStr = "GAME OVER";
+            int stringWidth = g.getFontMetrics().stringWidth(gameOverStr);
+            g.drawString(gameOverStr, (boardWidth - stringWidth) / 2, gameOverText.y + 100);
         }
 
+        // JUGADOR y PUNTAJE actual
+        if (cliente != null) {
+            g.setFont(new Font("Arial", Font.BOLD, 20));
+            String info = "Jugador: " + cliente.getName() + " | Puntaje: " + cliente.getScore();
+            int width = g.getFontMetrics().stringWidth(info);
+            g.drawString(info, (boardWidth - width) / 2, gameOverText.y + 140);
+        }
+
+        // Título de Leaderboard
         Font font = new Font("Arial", Font.PLAIN, 18);
         g.setFont(font);
         g.setColor(Color.WHITE);
         String scoreTitle = "MEJORES PUNTAJES";
-        FontMetrics fm = g.getFontMetrics(font);
-        int titleWidth = fm.stringWidth(scoreTitle);
+        int titleWidth = g.getFontMetrics(font).stringWidth(scoreTitle);
         int xTitle = (boardWidth - titleWidth) / 2;
         int yTitle = logo.y + 100;
         g.drawString(scoreTitle, xTitle, yTitle);
 
+        // Instrucciones
         String pressE = "PRESIONA E PARA REGRESAR";
-        int pressEWidth = fm.stringWidth(pressE);
+        int pressEWidth = g.getFontMetrics().stringWidth(pressE);
         int xPressE = (boardWidth - pressEWidth) / 2;
         int yPressE = text.y;
         g.drawString(pressE, xPressE, yPressE);
-        
+
+        // Mostrar top 10
         int count = 0;
         ArrayList<String> scores = GetLeaderboards();
         if (scores != null) {
@@ -194,19 +195,16 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
         }
     }
 
-    @Override
-    public void keyTyped(KeyEvent e) {}
-
-    @Override
-    public void keyPressed(KeyEvent e) {}
+    @Override public void keyTyped(KeyEvent e) {}
+    @Override public void keyPressed(KeyEvent e) {}
 
     @Override
     public void keyReleased(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_E) {
             JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
-            MainMenu mainMenu;
             try {
-                mainMenu = new MainMenu();
+                MainMenu mainMenu = new MainMenu();
+                frame.getContentPane().removeAll();
                 frame.add(mainMenu);
                 frame.pack();
                 mainMenu.requestFocus();
@@ -217,7 +215,5 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
         }
     }
 
-    @Override
-    public void actionPerformed(ActionEvent e) {}
-
+    @Override public void actionPerformed(ActionEvent e) {}
 }
