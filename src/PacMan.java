@@ -85,7 +85,10 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         }
     }
 
-    private Cliente cliente;
+
+
+    Cliente cliente;
+    private int score;
     private int rowCount = 21;
     private int columnCount = 19;
     private int tileSize = 32;
@@ -296,6 +299,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
                 } else {
                     ghost.reset();
                     cliente.addScore(100);
+                    score = cliente.getScore();
                 }
             }
 
@@ -320,6 +324,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
             if (collision(pacman, food)) {
                 foodEaten = food;
                 cliente.addScore(10);
+                score = cliente.getScore();
             }
         }
         foods.remove(foodEaten);
@@ -335,6 +340,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
             if(collision(pacman, power)) {
                 powerUpEaten = power;
                 cliente.addScore(50);
+                score = cliente.getScore();
                 isInvicible = true;
 
                 int delay = 10000;
@@ -378,68 +384,67 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     }
 
     private void GameOver() {
+    try {
+        File file = new File("./leaderboards.txt");
+        ArrayList<String> scores = new ArrayList<>();
 
-        try {
-            File file = new File("./leaderboards.txt");
-            if (file.createNewFile()) {
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter("leaderboards.txt", false))) {
-                    writer.write(cliente + "");
-                } catch (IOException ex) {
-                    ex.printStackTrace();
-                }
-            } else {
-                BufferedReader reader = new BufferedReader(new FileReader("./leaderboards.txt"));
-                ArrayList<Integer> scores = new ArrayList<>();
-                String line;
-
-                while ((line = reader.readLine()) != null) {
-                    line = line.trim();
-                    if (line.isEmpty())
-                        continue;
-                    try {
-                        scores.add(Integer.parseInt(line));
-                    } catch (NumberFormatException ex) {
-                        continue;
-                    }
-                }
-                reader.close();
-                file.delete(); // Elimina el archivo original
-
-                scores.add(cliente.getScore());
-                Collections.sort(scores, Collections.reverseOrder());
-
-                if (scores.size() > 10) {
-                    scores = new ArrayList<>(scores.subList(0, 10)); // Ajusté a 10, no 9
-                }
-
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter("leaderboards.txt", false))) {
-                    for (Integer s : scores) {
-                       writer.write(cliente.getName() + ": " + s.toString());
-                        writer.newLine();
-                    }
-                } catch (IOException ex) {
-                    ex.printStackTrace();
+        if (file.exists()) {
+            // Leer puntajes existentes
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    scores.add(line);
                 }
             }
-        } catch (Exception ex) {
-            System.out.println("An error occurred.");
-            ex.printStackTrace();
+            reader.close();
         }
 
-        JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
+        // Agregar nuevo puntaje con nombre (usamos player.getName() y score)
+        scores.add(cliente.getName() + ": " + score);
 
-        try {
-            frame.getContentPane().removeAll(); 
-            GameOver gameOver = new GameOver(cliente); 
-            frame.add(gameOver); 
-            frame.pack();
-            frame.repaint();
-            gameOver.requestFocus(); 
-            frame.setVisible(true); 
-        } catch (Exception e1) {
-            e1.printStackTrace();
+        // Ordenar de mayor a menor
+        scores.sort((a, b) -> {
+            int scoreA = Integer.parseInt(a.replaceAll("[^0-9]", ""));
+            int scoreB = Integer.parseInt(b.replaceAll("[^0-9]", ""));
+            return Integer.compare(scoreB, scoreA); // mayor a menor
+        });
+
+        // Mantener solo top 10
+        if (scores.size() > 10) {
+            scores = new ArrayList<>(scores.subList(0, 10));
         }
+
+        // Guardar puntajes sin borrar el archivo manualmente
+        BufferedWriter writer = new BufferedWriter(new FileWriter(file, false)); // sobreescribe
+        for (String s : scores) {
+            writer.write(s);
+            writer.newLine();
+        }
+        writer.close();
+
+    } catch (Exception ex) {
+        System.out.println("An error occurred.");
+        ex.printStackTrace();
     }
+
+    // Mostrar panel GameOver
+    JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
+
+    try {
+        frame.getContentPane().removeAll(); 
+        GameOver gameOver = new GameOver(cliente); 
+        frame.add(gameOver); 
+        frame.pack(); 
+        frame.repaint(); 
+        gameOver.requestFocus(); 
+        frame.setVisible(true); 
+    } catch (Exception e1) {
+        e1.printStackTrace();
+    }
+}
+
 
     @Override
     public void keyTyped(KeyEvent e) {}

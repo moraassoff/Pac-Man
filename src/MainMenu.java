@@ -39,7 +39,8 @@ public class MainMenu extends JPanel implements ActionListener, KeyListener {
             this.startY = y;
         }
     }
-    
+    PacMan pacmanGame = new PacMan(cliente);
+
     private int rowCount = 21;
     private int columnCount = 19;
     private int tileSize = 32;
