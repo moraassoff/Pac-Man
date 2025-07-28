@@ -6,5 +6,5 @@
     "java.project.referencedLibraries": [
         "lib/**/*.jar"
     ],
-    
+    "C_Cpp.default.compilerPath": ""
 }
