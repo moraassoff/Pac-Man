@@ -1,96 +1,90 @@
+// servidor.c
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <arpa/inet.h>
+#include <winsock2.h>
+#include <windows.h>
+
+#pragma comment(lib, "ws2_32.lib")
 
 #define PORT 12345
 #define MAX_CLIENTES 100
 
 int jugadores_conectados = 0;
-pthread_mutex_t lock;
+CRITICAL_SECTION lock;
+
+DWORD WINAPI manejar_cliente(LPVOID cliente_socket_ptr);
 
 void mostrar_conteo() {
     printf("Clientes conectados:\n");
     printf("Jugadores: %d\n\n", jugadores_conectados);
 }
 
-void* manejar_cliente(void* socket_desc) {
-    int sock = *(int*)socket_desc;
-    free(socket_desc);
+int main() {
+    WSADATA wsa;
+    SOCKET servidor, cliente;
+    struct sockaddr_in servidor_addr, cliente_addr;
+    int cliente_len = sizeof(cliente_addr);
+    char buffer[1024];
+
+    WSAStartup(MAKEWORD(2, 2), &wsa);
+
+    servidor = socket(AF_INET, SOCK_STREAM, 0);
+    servidor_addr.sin_family = AF_INET;
+    servidor_addr.sin_addr.s_addr = INADDR_ANY;
+    servidor_addr.sin_port = htons(12345);
+
+    bind(servidor, (struct sockaddr *)&servidor_addr, sizeof(servidor_addr));
+    listen(servidor, 1);
+
+    printf("Servidor esperando conexiones en el puerto 12345...\n");
+
+    cliente = accept(servidor, (struct sockaddr *)&cliente_addr, &cliente_len);
+    printf("Cliente conectado desde: %s\n", inet_ntoa(cliente_addr.sin_addr));
+
+    // leer nombre del cliente
+    int recibido = recv(cliente, buffer, sizeof(buffer) - 1, 0);
+    if (recibido > 0) {
+        buffer[recibido] = '\0';
+        printf("Nombre del cliente: %s\n", buffer);
+    }
+
+    closesocket(cliente);
+    closesocket(servidor);
+    WSACleanup();
+    return 0;
+}
+
+DWORD WINAPI manejar_cliente(LPVOID cliente_socket_ptr) {
+    SOCKET cliente_socket = *(SOCKET*)cliente_socket_ptr;
+    free(cliente_socket_ptr);
 
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
 
-    int leido = recv(sock, buffer, sizeof(buffer) - 1, 0);
+    int leido = recv(cliente_socket, buffer, sizeof(buffer) - 1, 0);
     if (leido <= 0) {
-        close(sock);
-        pthread_exit(NULL);
+        closesocket(cliente_socket);
+        return 0;
     }
 
     buffer[leido] = '\0';
 
-    // Verificarr tipo de cliente
     if (strncmp(buffer, "tipo:jugador", 12) == 0) {
-        pthread_mutex_lock(&lock);
+        EnterCriticalSection(&lock);
         jugadores_conectados++;
         mostrar_conteo();
-        pthread_mutex_unlock(&lock);
+        LeaveCriticalSection(&lock);
     }
 
-    while (recv(sock, buffer, sizeof(buffer), 0) > 0) {}
+    // mantienee cliente hasta desconectarse
+    while (recv(cliente_socket, buffer, sizeof(buffer), 0) > 0) {}
 
-    pthread_mutex_lock(&lock);
+    EnterCriticalSection(&lock);
     jugadores_conectados--;
     mostrar_conteo();
-    pthread_mutex_unlock(&lock);
+    LeaveCriticalSection(&lock);
 
-    close(sock);
-    pthread_exit(NULL);
-}
-
-int main() {
-    int servidor_fd, cliente_fd, *nuevo_sock;
-    struct sockaddr_in servidor, cliente;
-    socklen_t cliente_len = sizeof(cliente);
-
-    // Crear socket
-    servidor_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (servidor_fd == -1) {
-        perror("No se pudo crear el socket");
-        exit(1);
-    }
-
-    servidor.sin_family = AF_INET;
-    servidor.sin_addr.s_addr = INADDR_ANY;
-    servidor.sin_port = htons(PORT);
-
-    // Enlazar socket
-    if (bind(servidor_fd, (struct sockaddr*)&servidor, sizeof(servidor)) < 0) {
-        perror("Error al enlazar");
-        exit(1);
-    }
-
-    listen(servidor_fd, MAX_CLIENTES);
-    printf("Servidor escuchando en el puerto %d...\n", PORT);
-
-    pthread_mutex_init(&lock, NULL);
-
-    while ((cliente_fd = accept(servidor_fd, (struct sockaddr*)&cliente, &cliente_len))) {
-        pthread_t hilo_cliente;
-        nuevo_sock = malloc(sizeof(int));
-        *nuevo_sock = cliente_fd;
-        if (pthread_create(&hilo_cliente, NULL, manejar_cliente, (void*)nuevo_sock) < 0) {
-            perror("No se pudo crear el hilo");
-            return 1;
-        }
-
-        // Separar hilo
-        pthread_detach(hilo_cliente);
-    }
-
-    close(servidor_fd);
-    pthread_mutex_destroy(&lock);
+    closesocket(cliente_socket);
     return 0;
 }
