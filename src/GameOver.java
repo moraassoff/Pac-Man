@@ -157,13 +157,12 @@ public class GameOver extends JPanel implements ActionListener, KeyListener {
         }
 
         // Título de Leaderboard
-        Font font = new Font("Arial", Font.PLAIN, 18);
-        g.setFont(font);
+        g.setFont(new Font("Arial", Font.BOLD, 20));
         g.setColor(Color.WHITE);
         String scoreTitle = "MEJORES PUNTAJES";
-        int titleWidth = g.getFontMetrics(font).stringWidth(scoreTitle);
+        int titleWidth = g.getFontMetrics().stringWidth(scoreTitle);
         int xTitle = (boardWidth - titleWidth) / 2;
-        int yTitle = logo.y + 100;
+        int yTitle = logo.y + 150;
         g.drawString(scoreTitle, xTitle, yTitle);
 
         // Instrucciones

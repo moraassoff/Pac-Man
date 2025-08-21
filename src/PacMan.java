@@ -155,12 +155,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         setBackground(Color.BLACK);
         addKeyListener(this);
         setFocusable(true);
-
-        clip.open(ais);
-        clip.loop(Clip.LOOP_CONTINUOUSLY);
-
-        clip.setFramePosition(0);
-        clip.start();
+        clip.open(ais); 
 
         //load images
         wallImage = new ImageIcon(getClass().getResource("./wall.png")).getImage();
@@ -183,6 +178,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         gameLoop = new Timer(50, this); 
         gameLoop.start();
 
+        
     }
 
     public void loadMap() {
@@ -269,10 +265,11 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         }
     }
 
+    
     public void move() {
         pacman.x += pacman.velocityX;
         pacman.y += pacman.velocityY;
-
+        
         //check wall collisions
         for (Block wall : walls) {
             if (collision(pacman, wall)) {
@@ -321,7 +318,21 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
         //check food collision
         Block foodEaten = null;
         for (Block food : foods) {
-            if (collision(pacman, food)) {
+            if (collision(pacman, food)) {  
+                try {
+                    URL file = getClass().getResource("/comida.wav");
+                    AudioInputStream ais = AudioSystem.getAudioInputStream(file);
+                    Clip eatClip = AudioSystem.getClip();
+                    eatClip.open(ais);
+                    eatClip.start();
+                    new javax.swing.Timer(400, e -> {
+                        eatClip.stop();
+                        eatClip.close();
+                    }).start();
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
                 foodEaten = food;
                 cliente.addScore(10);
                 score = cliente.getScore();
@@ -384,22 +395,34 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     }
 
     private void GameOver() {
-    try {
-        File file = new File("./leaderboards.txt");
-        ArrayList<String> scores = new ArrayList<>();
+        try {
+            URL file = getClass().getResource("/muerte.wav");
+            AudioInputStream ais = AudioSystem.getAudioInputStream(file);
+            Clip eatClip = AudioSystem.getClip();
+            eatClip.open(ais);
+            eatClip.start();
 
-        if (file.exists()) {
-            // Leer puntajes existentes
-            BufferedReader reader = new BufferedReader(new FileReader(file));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (!line.isEmpty()) {
-                    scores.add(line);
-                }
-            }
-            reader.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
+        
+        try {
+            File file = new File("./leaderboards.txt");
+            ArrayList<String> scores = new ArrayList<>();
+
+            if (file.exists()) {
+                // Leer puntajes existentes
+                BufferedReader reader = new BufferedReader(new FileReader(file));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    line = line.trim();
+                    if (!line.isEmpty()) {
+                        scores.add(line);
+                    
+        }
+    }
+            reader.close();
+            }
 
         // Agregar nuevo puntaje con nombre (usamos player.getName() y score)
         scores.add(cliente.getName() + ": " + score);

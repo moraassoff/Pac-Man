@@ -1,2 +1,8 @@
+Fabricio: 1520
 Pedro: 1480
-TATA: 180
+Pablo: 1480
+Jose: 1430
+Ariana: 1260
+Rodolfo: 1170
+Mariana: 1170
+Bruno: 930
